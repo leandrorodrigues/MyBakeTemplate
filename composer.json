@@ -1,5 +1,5 @@
 {
-    "name": "leandrorodrigues/MyBakeTemplate",
+    "name": "leandrorodrigues/my-bake-tempĺate",
     "description": "MyBakeTemplate plugin for CakePHP",
     "type": "cakephp-plugin",
     "require": {
@@ -11,12 +11,12 @@
     },
     "autoload": {
         "psr-4": {
-            "MyBakeTemplate\\": "src"
+            "my-bake-tempĺate\\": "src"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "MyBakeTemplate\\Test\\": "tests",
+            "my-bake-tempĺate\\Test\\": "tests",
             "Cake\\Test\\": "./vendor/cakephp/cakephp/tests"
         }
     }
