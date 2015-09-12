@@ -16,95 +16,90 @@
  * @license       http://www.opensource.org/licenses/mit-license.php MIT License
  */
 use Cake\Utility\Inflector;
+use MyBakeTemplate\Core\TemplateCore;
 
-$fields = collection($fields)
-    ->filter(function($field) use ($schema) {
-        return !in_array($schema->columnType($field), ['binary', 'text']);
-    })
-    ->take(7);
+$templateCore = new TemplateCore($schema, $fields, $associations);
+
+$fields = $templateCore->filterListFields();
 %>
-<div class="actions columns col-lg-2 col-md-3">
-    <h3><?= __('Actions') ?></h3>
-    <ul class="nav nav-stacked nav-pills">
-        <li><?= $this->Html->link(__('New <%= $singularHumanName %>'), ['action' => 'add']) ?></li>
-        <li class="active disabled"><?= $this->Html->link(__('List <%= $pluralHumanName %>'), ['action' => 'index']) ?></li>
-<%
-    $done = [];
-    foreach ($associations as $type => $data):
-        foreach ($data as $alias => $details):
-            if ($details['controller'] != $this->name && !in_array($details['controller'], $done)):
-%>
-        <li><?= $this->Html->link(__('List <%= $this->_pluralHumanName($alias) %>'), ['controller' => '<%= $details['controller'] %>', 'action' => 'index']) ?> </li>
-        <li><?= $this->Html->link(__('New <%= $this->_singularHumanName($alias) %>'), ['controller' => '<%= $details['controller'] %>', 'action' => 'add']) ?> </li>
-<%
-                $done[] = $details['controller'];
-            endif;
-        endforeach;
-    endforeach;
-%>
-    </ul>
-</div>
-<div class="<%= $pluralVar %> index col-lg-10 col-md-9 columns">
+
+
+<div class="<%= $pluralVar %> index">
+    <?php echo $this->Html->link(__('Cadastrar novo ') . __('<%=$templateCore->adjustTerm($singularVar)%>'), array('action' => 'add'), array('class' => 'btn btn-primary pull-right')); ?>
+    <h1><?=__('<%= ucfirst($templateCore->adjustTerm($pluralVar)) %>')?></h1>
+
+    <div class="well well-sm text-right">
+        <?=$this->Form->create(null, ['class' => 'form-inline', 'type' => 'get']) ?>
+        <?=
+            $this->Form->input('q', ['label' => false, 'placeholder' => __('Busca'), 'class' => 'pull-right', 'append' =>
+                $this->Form->button('<span class="fa fa-search"></span>', ['class' => 'btn-primary'])
+            ])
+        ?>
+
+        <?=$this->Form->end(); ?>
+    </div>
     <div class="table-responsive">
-        <table class="table table-striped">
+        <table class="table table-striped table-hover">
         <thead>
             <tr>
-    <% foreach ($fields as $field): %>
-            <th><?= $this->Paginator->sort('<%= $field %>') ?></th>
-    <% endforeach; %>
-            <th class="actions"><?= __('Actions') ?></th>
+    <% foreach ($fields as $field){ %>
+            <th><?= $this->Paginator->sort('<%= $field %>', '<%= ucfirst($templateCore->adjustTerm($field))  %>') ?></th>
+    <% } %>
+            <th class="actions">&nbsp;</th>
             </tr>
         </thead>
         <tbody>
-        <?php foreach ($<%= $pluralVar %> as $<%= $singularVar %>): ?>
+        <?php foreach ($<%= $pluralVar %> as $<%= $singularVar %>) { ?>
             <tr>
-<%        foreach ($fields as $field) {
-        $isKey = false;
-        if (!empty($associations['BelongsTo'])) {
-            foreach ($associations['BelongsTo'] as $alias => $details) {
-                if ($field === $details['foreignKey']) {
-                    $isKey = true;
-%>
-            <td>
-                    <?= $<%= $singularVar %>->has('<%= $details['property'] %>') ? $this->Html->link($<%= $singularVar %>-><%= $details['property'] %>-><%= $details['displayField'] %>, ['controller' => '<%= $details['controller'] %>', 'action' => 'view', $<%= $singularVar %>-><%= $details['property'] %>-><%= $details['primaryKey'][0] %>]) : '' ?>
-                </td>
 <%
-                        break;
-                    }
-                }
-            }
-            if ($isKey !== true) {
-                if (!in_array($schema->columnType($field), ['integer', 'biginteger', 'decimal', 'float'])) {
-    %>
-            <td><?= h($<%= $singularVar %>-><%= $field %>) ?></td>
-    <%
-                } else {
-    %>
+    foreach ($fields as $field) {
+        $type = $templateCore->getFieldType($field);
+
+        switch($type) {
+            case 'number':
+%>
                 <td><?= $this->Number->format($<%= $singularVar %>-><%= $field %>) ?></td>
-    <%
-                }
-            }
+<%
+                break;
+            case 'boolean':
+%>
+                <td><?= $<%= $singularVar %>-><%= $field %>? 'Sim':'Não' ?></td>
+<%
+                break;
+            default:
+%>
+                <td><?= h($<%= $singularVar %>-><%= $field %>) ?></td>
+<%
         }
 
-        $pk = '$' . $singularVar . '->' . $primaryKey[0];
-    %>
+    }
+
+
+//TODO: belongsto
+/*
+<td>
+    <?= $<%= $singularVar %>->has('<%= $details['property'] %>') ? $this->Html->link($<%= $singularVar %>-><%= $details['property'] %>-><%= $details['displayField'] %>, ['controller' => '<%= $details['controller'] %>', 'action' => 'view', $<%= $singularVar %>-><%= $details['property'] %>-><%= $details['primaryKey'][0] %>]) : '' ?>
+</td>
+*/
+    $pk = '$' . $singularVar . '->' . $primaryKey[0];
+%>
                 <td class="actions">
-                    <?= $this->Html->link('<span class="glyphicon glyphicon-zoom-in"></span><span class="sr-only">' . __('View') . '</span>', ['action' => 'view', <%= $pk %>], ['escape' => false, 'class' => 'btn btn-xs btn-default', 'title' => __('View')]) ?>
-                    <?= $this->Html->link('<span class="glyphicon glyphicon-pencil"></span><span class="sr-only">' . __('Edit') . '</span>', ['action' => 'edit', <%= $pk %>], ['escape' => false, 'class' => 'btn btn-xs btn-default', 'title' => __('Edit')]) ?>
-                    <?= $this->Form->postLink('<span class="glyphicon glyphicon-trash"></span><span class="sr-only">' . __('Delete') . '</span>', ['action' => 'delete', <%= $pk %>], ['confirm' => __('Are you sure you want to delete # {0}?', <%= $pk %>), 'escape' => false, 'class' => 'btn btn-xs btn-danger', 'title' => __('Delete')]) ?>
+                    <?= $this->Html->link('<span class="fa fa-eye"></span><span class="sr-only">' . __('Visualizar') . '</span>', ['action' => 'view', <%= $pk %>], ['escape' => false, 'class' => 'btn btn-sm btn-primary', 'title' => __('View')]) ?>
+                    <?= $this->Html->link('<span class="fa fa-edit"></span><span class="sr-only">' . __('Editar') . '</span>', ['action' => 'edit', <%= $pk %>], ['escape' => false, 'class' => 'btn btn-sm btn-warning', 'title' => __('Edit')]) ?>
+                    <?= $this->Form->postLink('<span class="fa fa-trash"></span><span class="sr-only">' . __('Remover') . '</span>', ['action' => 'delete', <%= $pk %>], ['confirm' => __('Deseja realmente remover o ítem #{0}?', <%= $pk %>), 'escape' => false, 'class' => 'btn btn-sm btn-danger', 'title' => __('Delete')]) ?>
                 </td>
             </tr>
 
-        <?php endforeach; ?>
+        <?php }  ?>
         </tbody>
         </table>
     </div>
     <div class="paginator">
-        <ul class="pagination">
-            <?= $this->Paginator->prev('< ' . __('previous')) ?>
+        <p class="pull-left"><?= $this->Paginator->counter('Página {{page}} de {{pages}}, mostrando {{current}} registros de {{count}}.') ?></p>
+        <ul class="pagination pull-right">
+            <?= $this->Paginator->prev('<span class="fa fa-angle-left"></span>', ['escape' => false, 'title' => _('Anterior')]) ?>
             <?= $this->Paginator->numbers() ?>
-            <?= $this->Paginator->next(__('next') . ' >') ?>
+            <?= $this->Paginator->next('<span class="fa fa-angle-right"></span>', ['escape' => false, 'title' => _('Próxima')]) ?>
         </ul>
-        <p><?= $this->Paginator->counter() ?></p>
     </div>
 </div>
